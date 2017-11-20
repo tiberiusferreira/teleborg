@@ -7,6 +7,7 @@ mod chat_action;
 use reqwest::Client;
 use serde_json;
 use serde_json::Value;
+use std::io::Read;
 
 use bot::chat_action::get_chat_action;
 use bot::parse_mode::get_parse_mode;
@@ -71,6 +72,7 @@ impl Bot {
                        timeout: Option<i32>,
                        network_delay: Option<f32>)
                        -> Result<Option<Vec<Update>>> {
+        info!("Asking for bot updates!");
         let limit = limit.unwrap_or(100);
         let timeout = timeout.unwrap_or(0);
         let network_delay = network_delay.unwrap_or(0.0);
@@ -82,14 +84,22 @@ impl Bot {
                           limit,
                           timeout,
                           network_delay);
+        info!("Sending the request!");
         let mut data = self.client.get(&url).send()?;
-        let rjson: Value = check_for_error(data.json()?)?;
+        let mut content = String::new();
+        data.read_to_string(&mut content);
+        info!("Got valid response: {}", content);
+        let json = serde_json::from_str(content.as_str());
+        let rjson: Value = check_for_error(json?)?;
+        info!("Parsing JSON!");
         let updates_json = rjson.get("result");
-
+        info!("Checking the result key in the JSON!");
         if let Some(result) = updates_json {
+            info!("Found key, parsing it into a Vec<Update>!");
             let updates: Vec<Update> = serde_json::from_value(result.clone())?;
             Ok(Some(updates))
         } else {
+            info!("No key found!");
             Ok(None)
         }
     }

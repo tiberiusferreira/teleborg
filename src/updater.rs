@@ -1,7 +1,6 @@
 use std::{env, thread, time};
 use std::sync::mpsc;
 use std::sync::Arc;
-
 use bot;
 use dispatcher::Dispatcher;
 use objects::Update;
@@ -77,29 +76,35 @@ impl Updater {
                             network_delay: Option<f32>,
                             bot: Arc<bot::Bot>,
                             tx: mpsc::Sender<Update>) {
+        info!("Starting to poll for updates.");
         let poll_interval = time::Duration::from_secs(poll_interval.unwrap_or(0));
         let mut last_update_id = 0;
 
         loop {
+            info!("About to request updates!");
             let updates = bot.get_updates(last_update_id, None, timeout, network_delay);
 
             match updates {
                 Ok(Some(ref v)) => {
                     if let Some(u) = v.last() {
+                        info!("Got following updates: {:?}.", u);
                         for update in v {
                             tx.send(update.clone()).unwrap();
                         }
                         last_update_id = (u.update_id + 1) as i32;
                     } else {
+                        info!("Got empty vector of updates.");
                         // Do nothing, the vector is empty
                         continue;
                     }
                 }
                 Ok(None) => {
+                    info!("There were not updates :(, got Ok(None).");
                     // Do nothing, we have nothing
                     continue;
                 }
-                Err(..) => {
+                Err(e) => {
+                    error!("Holy Shit, we got an error: {:?}", e);
                     // Handle error
                     continue;
                 }
