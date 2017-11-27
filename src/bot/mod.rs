@@ -14,7 +14,7 @@ use bot::parse_mode::get_parse_mode;
 use error::{Result, check_for_error};
 use error::Error::{JsonNotFound, RequestFailed};
 use objects::{Update, Message, Contact, InlineKeyboardMarkup};
-
+use std::time::Duration;
 use value_extension::ValueExtension;
 
 /// A `Bot` which will do all the API calls.
@@ -34,7 +34,10 @@ pub struct Bot {
 impl Bot {
     /// Constructs a new `Bot`.
     pub fn new(bot_url: String) -> Result<Self> {
-        let client = Client::new()?;
+//        let client = Client::new()?;
+        let client = Client::builder()
+            .timeout(Duration::from_secs(50))
+            .build()?;
         let rjson = Bot::get_me(&client, &bot_url)?;
         let id = rjson.as_required_i64("id")?;
         let first_name = rjson.as_required_string("first_name")?;
@@ -61,7 +64,7 @@ impl Bot {
             let rjson: Value = resp.json()?;
             rjson.get("result").cloned().ok_or(JsonNotFound)
         } else {
-            Err(RequestFailed(*resp.status()))
+            Err(RequestFailed(resp.status()))
         }
     }
 

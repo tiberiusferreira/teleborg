@@ -50,8 +50,6 @@ impl From<io::Error> for Error {
 impl From<reqwest::Error> for Error {
     fn from(err: reqwest::Error) -> Error {
         match err {
-            reqwest::Error::Http(..) => Error::HttpError(err),
-            reqwest::Error::Serialize(..) => Error::SerializeError(err),
             _ => Error::RequestError(err),
         }
     }

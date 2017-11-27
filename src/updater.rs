@@ -105,12 +105,12 @@ impl Updater {
                 }
                 Err(e) => {
                     error!("Holy Shit, we got an error: {:?}", e);
-                    // Handle error
+                    info!("Sleeping for {} s", poll_interval.as_secs());
+                    thread::sleep(poll_interval);
                     continue;
                 }
             };
 
-            thread::sleep(poll_interval);
         }
     }
 }
