@@ -16,7 +16,7 @@ time = "*"
 futures-cpupool = "*"
 hyper = "*"
 threadpool = "*"
-reqwest = { version = "*", features = ["unstable"]}
+reqwest = { version = "*"}
 log = "*"
 serde = "*"
 serde_json = "*"
