@@ -8,6 +8,5 @@ pub struct Chat {
     pub username: Option<String>,
     pub first_name: Option<String>,
     pub last_name: Option<String>,
-    #[serde(rename="all_members_are_administrators")]
-    pub all_members_are_admins: Option<bool>,
+    pub all_members_are_administrators: Option<bool>,
 }

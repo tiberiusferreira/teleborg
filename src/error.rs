@@ -23,7 +23,7 @@ pub enum Error {
 }
 
 /// Check if there occured an error when querying the API.
-pub fn check_for_error(json: serde_json::Value) -> Result<serde_json::Value> {
+pub fn check_json_has_ok(json: serde_json::Value) -> Result<serde_json::Value> {
     let status = json.get("ok")
         .ok_or(Error::JsonNotFound)?
         .as_bool()

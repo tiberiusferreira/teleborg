@@ -1,4 +1,5 @@
 /// The parse modes for messages.
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub enum ParseMode {
     Markdown,
     Html,
