@@ -1,13 +1,12 @@
 extern crate reqwest;
-extern crate threadpool;
 use std::time;
 use reqwest::Client;
 use std::time::Duration;
-use self::threadpool::ThreadPool;
+use std::sync::mpsc::{channel, Receiver, Sender};
+use std::thread;
 #[derive(Debug)]
 pub struct RequestSender{
-    client: Client,
-    thread_pool: ThreadPool,
+    params_sender: Sender<PostParameters>
 }
 
 #[derive(Clone, Debug)]
@@ -17,31 +16,46 @@ pub struct PostParameters{
 }
 
 impl RequestSender{
+
     pub fn new() -> RequestSender{
+        let (params_sender, params_receiver): (Sender<PostParameters>, Receiver<PostParameters>) = channel();
         let request_sender = RequestSender{
-            client: Client::builder()
-                .timeout(Duration::from_secs(5))
-                .build().unwrap(),
-            thread_pool: ThreadPool::new(4),
+            params_sender
         };
+        thread::spawn(move ||{
+            let client = Client::builder()
+                .timeout(Duration::from_secs(5))
+                .build().unwrap();
+            loop{
+                match params_receiver.recv() {
+                    Ok(request_params) => {
+                        info!("Sending post! {:?}", request_params);
+                        let beginning = time::Instant::now();
+                        match client.post(request_params.path.as_str()).form(&request_params.params).send(){
+                            Ok(mut resp) => {
+                                println!("{}", resp.text().unwrap())
+                            },
+                            Err(e) => {
+                                error!("Error sending. {}\n Parameters: {:?}", e, request_params);
+                            }
+                        }
+                        let now = time::Instant::now();
+                        info!("Took {}s and {}ms to send post",
+                              now.duration_since(beginning).as_secs(),
+                              now.duration_since(beginning).subsec_nanos() as f64/1_000_000.0);
+                    },
+                    Err(e) => {
+                        error!("Error receiving request params. Going to panic : {}", e);
+                        panic!();
+                    }
+                }
+            }
+
+        });
+
         return request_sender;
     }
     pub fn send(&self, post_parameters: PostParameters){
-
-        info!("Busy threads: {}", self.thread_pool.active_count());
-        let client_clone = self.client.clone();
-        let post_parameters_clone = post_parameters.clone();
-        self.thread_pool.execute(move ||{
-            let beginning = time::Instant::now();
-            match client_clone.post(post_parameters_clone.path.as_str()).form(&post_parameters_clone.params).send() {
-                Ok(_) => {},
-                Err(e) => error!("Error sending. {}\n Parameters: {:?}", e, post_parameters_clone)
-            }
-            let now = time::Instant::now();
-            info!("Took {}s and {}ms to send post",
-                  now.duration_since(beginning).as_secs(),
-                  now.duration_since(beginning).subsec_nanos() as f64/1_000_000.0)
-        });
-
+        self.params_sender.send(post_parameters).unwrap();
     }
 }

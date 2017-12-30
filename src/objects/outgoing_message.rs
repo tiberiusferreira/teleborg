@@ -24,8 +24,10 @@ impl OutgoingMessage{
     pub fn with_reply_msg_id(&mut self, reply_to_message_id: i64){
         self.reply_to_message_id = Some(reply_to_message_id);
     }
-    pub fn with_reply_markup(&mut self, markup: InlineKeyboardMarkup){
-        self.reply_markup = Some(markup);
+
+
+    pub fn with_reply_markup(&mut self, markup: Vec<Vec<String>>){
+        self.reply_markup = Some(InlineKeyboardMarkup::new(markup));
     }
 
     pub fn to_tuple_vec(&self) -> Vec<(String, String)>{

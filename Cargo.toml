@@ -10,11 +10,7 @@ readme = "README.md"
 keywords = ["telegram-bot", "rust", "telegram-api"]
 
 [dependencies]
-futures = "*"
-tokio-core = "*"
 time = "*"
-futures-cpupool = "*"
-hyper = "*"
 threadpool = "*"
 reqwest = { version = "*"}
 log = "*"

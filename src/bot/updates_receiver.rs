@@ -66,7 +66,6 @@ impl UpdatesReceiver{
         let sender_clone = self.updates_sender.clone();
         thread::spawn(move ||{
             loop {
-                info!("Sending the request!");
                 let url = format!("{}&offset={}", url,offset);
                 let mut data = match client_clone.get(&url).send() {
                     Ok(response) => response,

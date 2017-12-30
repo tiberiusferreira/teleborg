@@ -20,8 +20,8 @@ impl OutgoingEdit{
         }
     }
 
-    pub fn with_reply_markup(&mut self, markup: InlineKeyboardMarkup){
-        self.reply_markup = Some(markup);
+    pub fn with_reply_markup(&mut self, markup: Vec<Vec<String>>){
+        self.reply_markup = Some(InlineKeyboardMarkup::new(markup));
     }
 
     pub fn to_tuple_vec(&self) -> Vec<(String, String)>{
