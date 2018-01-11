@@ -65,11 +65,17 @@ impl UpdatesReceiver{
         let client_clone = self.client.clone();
         let sender_clone = self.updates_sender.clone();
         thread::spawn(move ||{
+            let mut number_errors: u64 = 0;
             loop {
+                if number_errors > 0 {
+                    error!("Sleeping for {}", number_errors);
+                    thread::sleep(Duration::from_secs(number_errors));
+                }
                 let url = format!("{}&offset={}", url,offset);
                 let mut data = match client_clone.get(&url).send() {
                     Ok(response) => response,
                     Err(e) => {
+                        number_errors += 1;
                         error!("{:?}", e);
                         continue;
                     }
@@ -77,6 +83,7 @@ impl UpdatesReceiver{
                 let mut response_content = String::new();
                 if let Err(e) = data.read_to_string(&mut response_content){
                     error!("Could not read response to string: {}", e);
+                    number_errors += 1;
                     continue;
                 }
                 let json = serde_json::from_str(response_content.as_str());
@@ -84,6 +91,7 @@ impl UpdatesReceiver{
                     Ok(value) => value,
                     Err(e) => {
                         error!("{:?} for response: {}", e, response_content);
+                        number_errors += 1;
                         continue;
                     },
                 };
@@ -91,6 +99,7 @@ impl UpdatesReceiver{
                     Ok(json) => json,
                     Err(e) => {
                         error!("{:?} for response: {}", e, response_content);
+                        number_errors += 1;
                         continue;
                     },
                 };
@@ -102,19 +111,25 @@ impl UpdatesReceiver{
                         },
                         Err(e) => {
                             error!("{:?} for response: {}", e, response_content);
+                            number_errors += 1;
                             continue;
                         },
                     };
                     if updates.is_empty() {
+                        number_errors = 0;
                         continue;
                     }
                     offset = (updates.last().unwrap().update_id + 1) as i32;
                     info!("Got updates: {:?}", updates);
                     if let Err(e) = sender_clone.send(updates){
                         error!("Could not send update through channel: {}", e);
+                        number_errors += 1;
+                    }else {
+                        number_errors = 0;
                     }
                 } else {
                     error!("No key found for response: {}", response_content);
+                    number_errors += 1;
                     continue;
                 }
             };
