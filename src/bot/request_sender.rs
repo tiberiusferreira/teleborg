@@ -52,7 +52,6 @@ impl RequestSender{
             }
 
         });
-
         return request_sender;
     }
     pub fn send(&self, post_parameters: PostParameters){
