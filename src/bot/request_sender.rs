@@ -33,7 +33,9 @@ impl RequestSender{
                         let beginning = time::Instant::now();
                         match client.post(request_params.path.as_str()).form(&request_params.params).send(){
                             Ok(mut resp) => {
-                                println!("{}", resp.text().unwrap())
+                                if let Err(e) = resp.copy_to(&mut ::std::io::sink()){
+                                    error!("Error copying response to iosink. {}", e);
+                                }
                             },
                             Err(e) => {
                                 error!("Error sending. {}\n Parameters: {:?}", e, request_params);

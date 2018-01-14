@@ -11,17 +11,16 @@ use objects::Update;
 use std::io::Read;
 use bot::bot::construct_api_url;
 use ::error::Result;
-
+const MAX_UPDATES_PER_REQUEST: i32 = 5;
+const SERVER_SIDE_LONG_POLL_TIMEOUT: i32 = 30;
 
 fn construct_get_updates_url_minus_offset(bot_url : &str) -> String{
-    let max_updates_per_request = 5;
-    let server_side_timeout = 30;
     let path = "getUpdates";
     let path_url = construct_api_url(bot_url, &path);
     let url = format!("{}?limit={}&timeout={}&allowed_updates=[\"message\",\"callback_query\"]",
                       path_url,
-                      max_updates_per_request,
-                      server_side_timeout,
+                      MAX_UPDATES_PER_REQUEST,
+                      SERVER_SIDE_LONG_POLL_TIMEOUT,
     );
     url
 }
@@ -45,8 +44,8 @@ struct ReceiverThreadData{
 impl ReceiverThreadData{
     fn errors_backpressure_sleep(&self){
         if self.number_errors > 0 {
-            error!("Sleeping for {}", self.number_errors);
-            thread::sleep(Duration::from_secs(self.number_errors));
+            error!("Sleeping for {}", 3*self.number_errors);
+            thread::sleep(Duration::from_secs(3*self.number_errors));
         }
     }
 
