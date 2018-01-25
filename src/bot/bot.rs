@@ -30,31 +30,29 @@ pub trait TelegramInterface {
 
 #[derive(Debug)]
 pub struct Bot {
+    pub bot_user_info: BotUserInfo,
+    pub bot_url: String,
+    request_sender: RequestSender,
+    updates_receiver: UpdatesReceiver,
+}
+
+#[derive(Debug)]
+pub struct BotUserInfo{
     pub id: i64,
     pub first_name: String,
     pub last_name: Option<String>,
     pub username: String,
-    pub bot_url: String,
-    request_sender: RequestSender,
-    updates_receiver: UpdatesReceiver,
 }
 
 impl TelegramInterface for Bot{
     fn new(bot_token: String) -> Result<Self> {
         let bot_url = [TELEGRAM_BASE_URL, bot_token.as_str()].concat();
         let temp_client = Client::builder()
-            .timeout(Duration::from_secs(5))
+            .timeout(Duration::from_secs(15))
             .build().unwrap();
-        let rjson = Bot::get_me(&temp_client, &bot_url)?;
-        let id = rjson.as_required_i64("id")?;
-        let first_name = rjson.as_required_string("first_name")?;
-        let last_name = rjson.as_optional_string("last_name");
-        let username = rjson.as_required_string("username")?;
+        let bot_user_info = Bot::get_me(&temp_client, &bot_url);
         Ok(Bot {
-            id,
-            first_name,
-            last_name,
-            username,
+            bot_user_info,
             bot_url: bot_url.clone(),
             request_sender: RequestSender::new(),
             updates_receiver: UpdatesReceiver::new(bot_url),
@@ -85,15 +83,39 @@ impl TelegramInterface for Bot{
 }
 impl Bot {
 
+    fn get_me(client: &Client, bot_url: &str) -> BotUserInfo{
+        let mut number_errors_up_to_300 = 0;
+        loop {
+            match Bot::try_get_me(&client, &bot_url) {
+                Ok(bot_user_info) => return bot_user_info,
+                Err(e) => {
+                    number_errors_up_to_300 = (number_errors_up_to_300 + 1) % 300;
+                    error!("Error getting bot info: {:?}", e);
+                    error!("Sleeping for: {} seconds.", 60*number_errors_up_to_300);
+                    std::thread::sleep(Duration::from_secs(60*number_errors_up_to_300));
+                }
+            }
+        }
+
+    }
     /// API call which gets the information about your bot.
-    fn get_me(client: &Client, bot_url: &str) -> Result<Value> {
+    fn try_get_me(client: &Client, bot_url: &str) -> Result<BotUserInfo> {
         let path = "getMe";
         let url = construct_api_url(bot_url, &path);
         let mut resp = client.get(&url).send()?;
-
         if resp.status().is_success() {
             let rjson: Value = resp.json()?;
-            rjson.get("result").cloned().ok_or(JsonNotFound)
+            let rjson = rjson.get("result").ok_or(JsonNotFound)?;
+            let id = rjson.as_required_i64("id")?;
+            let first_name = rjson.as_required_string("first_name")?;
+            let last_name = rjson.as_optional_string("last_name");
+            let username = rjson.as_required_string("username")?;
+            return Ok(BotUserInfo{
+                id,
+                first_name,
+                last_name,
+                username,
+            })
         } else {
             Err(RequestFailed(resp.status()))
         }
