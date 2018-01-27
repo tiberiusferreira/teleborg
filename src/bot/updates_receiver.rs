@@ -54,9 +54,9 @@ impl ReceiverThreadData{
         format!("{}&offset={}", self.url_no_offset, self.offset)
     }
     fn update_offset(&mut self, updates: &Vec<Update>){
-        self.offset = (updates.last().unwrap().update_id + 1) as u64;
-        info!("Got updates: {:?}", updates);
-
+        if let Some(update) = updates.last(){
+            self.offset = (update.update_id + 1) as u64;
+        }
     }
 
     fn get_updates(&self) -> Result<Vec<Update>>{
@@ -79,53 +79,49 @@ impl ReceiverThreadData{
         }
     }
 
-    fn filter_old_messages(&self, updates: Vec<Update>) -> Vec<Update>{
-        let unix_time;
-        match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH){
-            Ok(n) => {
-                println!("1970-01-01 00:00:00 UTC was {} seconds ago!", n.as_secs());
-                unix_time = n.as_secs() as i64;
-            },
-            Err(_) => {
-                error!("SystemTime before UNIX EPOCH!");
-                return updates;
-            },
-        }
-
-        let updates = updates.iter().cloned().filter( |update| {
-            let option_recent_message_update = update.message.as_ref().and_then(|message|{
-                if message.date + 10 < unix_time {
-                    None
-                }else {
-                    Some(message)
-                }
-            });
-
-            let option_recent_callback_update = update.callback_query.as_ref().and_then(|callback|{
-                callback.message.as_ref().and_then(|message|{
-                    if message.date + 10 < unix_time {
-                        None
-                    }else {
-                        Some(message)
-                    }
-                })
-            });
-
-            if option_recent_message_update.is_some() || option_recent_callback_update.is_some(){
-                return true;
-            }
-            return false;
-        }).collect::<Vec<Update>>();
-        updates
-
-    }
+//    fn filter_old_messages(&self, updates: Vec<Update>) -> Vec<Update>{
+//        let unix_time;
+//        match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH){
+//            Ok(n) => {
+//                unix_time = n.as_secs() as i64;
+//            },
+//            Err(_) => {
+//                error!("SystemTime before UNIX EPOCH!");
+//                return updates;
+//            },
+//        }
+//
+//        let updates = updates.iter().cloned().filter( |update| {
+//            let option_recent_message_update = update.message.as_ref().and_then(|message|{
+//                if message.date + 10 < unix_time {
+//                    info!("Got an old message!");
+//                    return Some(message);
+//                }else {
+//                    return None;
+//                }
+//            });
+//            return option_recent_message_update.is_some() || update.callback_query.is_some();
+////            let option_recent_callback_update = update.callback_query.as_ref().and_then(|callback|{
+////                callback.message.as_ref().and_then(|message|{
+////                    if message.date + 10 < unix_time {
+////                        info!("Got an old callback!");
+////                        None
+////                    }else {
+////                        Some(message)
+////                    }
+////                })
+////            });
+////            return true;
+//        }).collect::<Vec<Update>>();
+//        updates
+//    }
 
     fn handle_update(&mut self, updates: Vec<Update>){
         if updates.is_empty(){
             self.number_errors = 0;
         }else {
-            let updates = self.filter_old_messages(updates);
             self.update_offset(&updates);
+//            let updates = self.filter_old_messages(updates);
             self.send_updates(updates);
         }
     }
