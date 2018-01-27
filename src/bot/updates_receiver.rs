@@ -10,6 +10,7 @@ use std::sync::mpsc::{Sender, Receiver, channel};
 use objects::Update;
 use std::io::Read;
 use bot::bot::construct_api_url;
+use std;
 use ::error::Result;
 const MAX_UPDATES_PER_REQUEST: i32 = 5;
 const SERVER_SIDE_LONG_POLL_TIMEOUT: i32 = 30;
@@ -78,10 +79,52 @@ impl ReceiverThreadData{
         }
     }
 
+    fn filter_old_messages(&self, updates: Vec<Update>) -> Vec<Update>{
+        let unix_time;
+        match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH){
+            Ok(n) => {
+                println!("1970-01-01 00:00:00 UTC was {} seconds ago!", n.as_secs());
+                unix_time = n.as_secs() as i64;
+            },
+            Err(_) => {
+                error!("SystemTime before UNIX EPOCH!");
+                return updates;
+            },
+        }
+
+        let updates = updates.iter().cloned().filter( |update| {
+            let option_recent_message_update = update.message.as_ref().and_then(|message|{
+                if message.date + 10 < unix_time {
+                    None
+                }else {
+                    Some(message)
+                }
+            });
+
+            let option_recent_callback_update = update.callback_query.as_ref().and_then(|callback|{
+                callback.message.as_ref().and_then(|message|{
+                    if message.date + 10 < unix_time {
+                        None
+                    }else {
+                        Some(message)
+                    }
+                })
+            });
+
+            if option_recent_message_update.is_some() || option_recent_callback_update.is_some(){
+                return true;
+            }
+            return false;
+        }).collect::<Vec<Update>>();
+        updates
+
+    }
+
     fn handle_update(&mut self, updates: Vec<Update>){
         if updates.is_empty(){
             self.number_errors = 0;
         }else {
+            let updates = self.filter_old_messages(updates);
             self.update_offset(&updates);
             self.send_updates(updates);
         }
