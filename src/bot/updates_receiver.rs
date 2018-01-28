@@ -10,7 +10,6 @@ use std::sync::mpsc::{Sender, Receiver, channel};
 use objects::Update;
 use std::io::Read;
 use bot::bot::construct_api_url;
-use std;
 use ::error::Result;
 const MAX_UPDATES_PER_REQUEST: i32 = 5;
 const SERVER_SIDE_LONG_POLL_TIMEOUT: i32 = 30;
@@ -36,7 +35,7 @@ pub struct UpdatesReceiver{
 
 struct ReceiverThreadData{
     client: Client,
-    offset: u64,
+    offset: i64,
     number_errors: u64,
     url_no_offset: String,
     updates_sender: Sender<Vec<Update>>,
@@ -55,7 +54,7 @@ impl ReceiverThreadData{
     }
     fn update_offset(&mut self, updates: &Vec<Update>){
         if let Some(update) = updates.last(){
-            self.offset = (update.update_id + 1) as u64;
+            self.offset = update.update_id + 1;
         }
     }
 
@@ -79,53 +78,41 @@ impl ReceiverThreadData{
         }
     }
 
-//    fn filter_old_messages(&self, updates: Vec<Update>) -> Vec<Update>{
-//        let unix_time;
-//        match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH){
-//            Ok(n) => {
-//                unix_time = n.as_secs() as i64;
-//            },
-//            Err(_) => {
-//                error!("SystemTime before UNIX EPOCH!");
-//                return updates;
-//            },
-//        }
-//
-//        let updates = updates.iter().cloned().filter( |update| {
-//            let option_recent_message_update = update.message.as_ref().and_then(|message|{
-//                if message.date + 10 < unix_time {
-//                    info!("Got an old message!");
-//                    return Some(message);
-//                }else {
-//                    return None;
-//                }
-//            });
-//            return option_recent_message_update.is_some() || update.callback_query.is_some();
-////            let option_recent_callback_update = update.callback_query.as_ref().and_then(|callback|{
-////                callback.message.as_ref().and_then(|message|{
-////                    if message.date + 10 < unix_time {
-////                        info!("Got an old callback!");
-////                        None
-////                    }else {
-////                        Some(message)
-////                    }
-////                })
-////            });
-////            return true;
-//        }).collect::<Vec<Update>>();
-//        updates
-//    }
-
     fn handle_update(&mut self, updates: Vec<Update>){
         if updates.is_empty(){
             self.number_errors = 0;
         }else {
             self.update_offset(&updates);
-//            let updates = self.filter_old_messages(updates);
             self.send_updates(updates);
         }
     }
 
+    fn handle_update_but_not_send_it(&mut self, updates: &Vec<Update>){
+        if updates.is_empty(){
+            self.number_errors = 0;
+        }else {
+            self.update_offset(&updates);
+        }
+    }
+
+
+    pub fn discard_pending_updates(&mut self){
+        self.offset = -1;
+        loop {
+            self.errors_backpressure_sleep();
+            match self.get_updates(){
+                Ok(updates) => {
+                    self.handle_update_but_not_send_it(&updates);
+                    info!("Cleared previous updates. Last one was: {:?}", updates);
+                    return;
+                },
+                Err(e) => {
+                    error!("{:?}", e);
+                    self.number_errors += 1;
+                }
+            }
+        }
+    }
     fn main_loop(&mut self){
         self.errors_backpressure_sleep();
         match self.get_updates(){
@@ -170,12 +157,13 @@ impl UpdatesReceiver{
             client: Client::builder()
                 .timeout(Duration::from_secs(40))
                 .build().unwrap(),
-            offset: 0,
+            offset: -1,
             number_errors: 0,
             url_no_offset: construct_get_updates_url_minus_offset(&self.bot_url),
             updates_sender: self.updates_sender.clone()
         };
         thread::spawn(move ||{
+            receiver_data.discard_pending_updates();
             loop {
                 receiver_data.main_loop();
             };
