@@ -6,6 +6,7 @@ pub use self::inline_keyboard::{InlineKeyboardMarkup, InlineKeyboardButton};
 pub use self::call_back_query::CallBackQuery;
 pub use self::parse_mode::{ParseMode, get_parse_mode};
 pub use self::outgoing_message::OutgoingMessage;
+pub use self::outgoing_channel_message::OutgoingChannelMessage;
 pub use self::outgoing_edit::OutgoingEdit;
 
 mod chat;
@@ -17,3 +18,4 @@ mod call_back_query;
 mod outgoing_edit;
 mod outgoing_message;
 mod parse_mode;
+mod outgoing_channel_message;

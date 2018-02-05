@@ -11,7 +11,7 @@ use objects::Update;
 use std::io::Read;
 use bot::bot::construct_api_url;
 use ::error::Result;
-const MAX_UPDATES_PER_REQUEST: i32 = 5;
+const MAX_UPDATES_PER_REQUEST: i32 = 20;
 const SERVER_SIDE_LONG_POLL_TIMEOUT: i32 = 30;
 
 fn construct_get_updates_url_minus_offset(bot_url : &str) -> String{
