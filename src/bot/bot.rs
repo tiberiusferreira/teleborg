@@ -6,6 +6,7 @@ use serde_json::Value;
 use bot::request_sender::{RequestSender, PostParameters};
 use bot::updates_receiver::UpdatesReceiver;
 use objects::OutgoingMessage;
+use objects::OutgoingChannelMessage;
 use objects::OutgoingEdit;
 use error::{Result};
 use error::Error::{JsonNotFound, RequestFailed};
@@ -25,6 +26,7 @@ pub trait TelegramInterface {
     fn start_getting_updates(&mut self);
     fn get_updates_channel(&self) -> &Receiver<Vec<Update>>;
     fn send_msg(&self, outgoing_message: OutgoingMessage);
+    fn send_channel_msg(&self, outgoing_message: OutgoingChannelMessage);
     fn edit_message_text(&self, outgoing_edit: OutgoingEdit);
 }
 
@@ -71,6 +73,12 @@ impl TelegramInterface for Bot{
     fn send_msg(&self, outgoing_message: OutgoingMessage){
         let path = "sendMessage";
         let params = outgoing_message.to_tuple_vec();
+        self.post_message(path, params)
+    }
+
+    fn send_channel_msg(&self, outgoing_channel_message: OutgoingChannelMessage){
+        let path = "sendMessage";
+        let params = outgoing_channel_message.to_tuple_vec();
         self.post_message(path, params)
     }
 
