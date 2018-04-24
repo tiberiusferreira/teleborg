@@ -60,4 +60,5 @@ impl RequestSender{
     pub fn send(&self, post_parameters: PostParameters){
         self.params_sender.send(post_parameters).unwrap();
     }
+
 }
