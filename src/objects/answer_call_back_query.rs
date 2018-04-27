@@ -1,5 +1,3 @@
-use objects::message::Message;
-use objects::user::User;
 
 #[derive(Clone, Deserialize, Debug)]
 pub struct AnswerCallbackQuery {
