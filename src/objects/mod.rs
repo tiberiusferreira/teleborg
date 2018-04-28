@@ -9,6 +9,7 @@ pub use self::outgoing_message::OutgoingMessage;
 pub use self::outgoing_channel_message::OutgoingChannelMessage;
 pub use self::answer_call_back_query::AnswerCallbackQuery;
 pub use self::outgoing_edit::OutgoingEdit;
+pub use self::outgoing_photo::OutgoingPhoto;
 
 mod chat;
 mod answer_call_back_query;
@@ -21,3 +22,4 @@ mod outgoing_edit;
 mod outgoing_message;
 mod parse_mode;
 mod outgoing_channel_message;
+mod outgoing_photo;

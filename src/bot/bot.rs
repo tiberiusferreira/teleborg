@@ -6,6 +6,7 @@ use serde_json::Value;
 use bot::request_sender::{RequestSender, PostParameters};
 use bot::updates_receiver::UpdatesReceiver;
 use objects::OutgoingMessage;
+use objects::OutgoingPhoto;
 use objects::OutgoingChannelMessage;
 use objects::AnswerCallbackQuery;
 use objects::OutgoingEdit;
@@ -30,6 +31,7 @@ pub trait TelegramInterface {
     fn send_channel_msg(&self, outgoing_message: OutgoingChannelMessage);
     fn edit_message_text(&self, outgoing_edit: OutgoingEdit);
     fn send_callback_answer(&self, callback_answer: AnswerCallbackQuery);
+    fn send_photo(&self, outgoing_photo: OutgoingPhoto);
     }
 
 #[derive(Debug)]
@@ -78,12 +80,6 @@ impl TelegramInterface for Bot{
         self.post_message(path, params)
     }
 
-    fn send_callback_answer(&self, callback_answer: AnswerCallbackQuery){
-        let path = "answerCallbackQuery";
-        let params = callback_answer.to_tuple_vec();
-        self.post_message(path, params)
-    }
-
     fn send_channel_msg(&self, outgoing_channel_message: OutgoingChannelMessage){
         let path = "sendMessage";
         let params = outgoing_channel_message.to_tuple_vec();
@@ -94,6 +90,18 @@ impl TelegramInterface for Bot{
         let path = "editMessageText";
         let params = outgoing_edit.to_tuple_vec();
         self.post_message(path, params);
+    }
+
+    fn send_callback_answer(&self, callback_answer: AnswerCallbackQuery){
+        let path = "answerCallbackQuery";
+        let params = callback_answer.to_tuple_vec();
+        self.post_message(path, params)
+    }
+
+    fn send_photo(&self, outgoing_photo: OutgoingPhoto){
+        let path = "sendPhoto";
+//        let params = outgoing_photo.to_tuple_vec();
+        self.post_photo(path, outgoing_photo)
     }
 
 }
@@ -137,13 +145,23 @@ impl Bot {
         }
     }
 
+    fn post_photo(&self, path: &str, outgoing_photo: OutgoingPhoto){
+        let url = construct_api_url(&self.bot_url, path);
+
+        self.request_sender.send(PostParameters {
+            path: url.to_string(),
+            params: outgoing_photo.to_tuple_vec(),
+            file_to_send: Some(outgoing_photo.photo_path)
+        });
+    }
 
     /// The actual networking done for sending messages.
     fn post_message(&self, path: &str, params: Vec<(String, String)>){
         let url = construct_api_url(&self.bot_url, path);
         self.request_sender.send(PostParameters {
             path: url.to_string(),
-            params
+            params,
+            file_to_send: None
         });
     }
 }
