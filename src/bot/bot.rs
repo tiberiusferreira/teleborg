@@ -108,15 +108,15 @@ impl TelegramInterface for Bot{
 impl Bot {
 
     fn get_me(client: &Client, bot_url: &str) -> BotUserInfo{
-        let mut number_errors_up_to_300 = 0;
+        let mut number_errors_up_to_2000 = 0;
         loop {
             match Bot::try_get_me(&client, &bot_url) {
                 Ok(bot_user_info) => return bot_user_info,
                 Err(e) => {
-                    number_errors_up_to_300 = (number_errors_up_to_300 + 1) % 300;
+                    number_errors_up_to_2000 = (number_errors_up_to_2000 + 1) % 2000;
                     error!("Error getting bot info: {:?}", e);
-                    error!("Sleeping for: {} seconds.", 60*number_errors_up_to_300);
-                    std::thread::sleep(Duration::from_secs(60*number_errors_up_to_300));
+                    error!("Sleeping for: {} seconds.", 60*number_errors_up_to_2000);
+                    std::thread::sleep(Duration::from_secs(60*number_errors_up_to_2000));
                 }
             }
         }
