@@ -15,7 +15,7 @@ use error::Error::{JsonNotFound, RequestFailed};
 use objects::{Update};
 use std::time::Duration;
 use value_extension::ValueExtension;
-use std::sync::mpsc::{Receiver};
+use crossbeam_channel::Receiver;
 use std;
 /// A `Bot` which will do all the API calls.
 const TELEGRAM_BASE_URL: &'static str = "https://api.telegram.org/bot";

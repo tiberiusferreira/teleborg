@@ -6,7 +6,9 @@ use std::thread;
 use serde_json;
 use serde_json::Value;
 use error::check_json_has_ok;
-use std::sync::mpsc::{Sender, Receiver, channel};
+use crossbeam_channel as channel;
+use crossbeam_channel::Receiver;
+use crossbeam_channel::Sender;
 use objects::Update;
 use std::io::Read;
 use bot::bot::construct_api_url;
@@ -70,12 +72,7 @@ impl ReceiverThreadData{
     }
 
     fn send_updates(&mut self, updates: Vec<Update>){
-        if let Err(e) = self.updates_sender.send(updates){
-            error!("Could not send update through channel: {}", e);
-            self.number_errors += 1;
-        }else {
-            self.number_errors  = 0;
-        }
+        self.updates_sender.send(updates);
     }
 
     fn handle_update(&mut self, updates: Vec<Update>){
@@ -130,7 +127,7 @@ impl ReceiverThreadData{
 
 impl UpdatesReceiver{
     pub fn new(url: String)-> Self{
-        let (updates_sender, updates_receiver) = channel();
+        let (updates_sender, updates_receiver) = channel::unbounded();
         UpdatesReceiver{
             bot_url: url,
             updates_sender,

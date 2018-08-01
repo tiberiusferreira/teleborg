@@ -5,6 +5,7 @@ extern crate serde_json;
 
 #[macro_use] extern crate log;
 #[macro_use] extern crate failure;
+extern crate crossbeam_channel;
 pub use self::bot::bot::{Bot};
 pub use self::bot::update_cleaner::*;
 pub use self::objects::*;

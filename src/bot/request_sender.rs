@@ -2,7 +2,9 @@ extern crate reqwest;
 use std::time;
 use reqwest::{Client, multipart::Form};
 use std::time::Duration;
-use std::sync::mpsc::{channel, Receiver, Sender};
+use crossbeam_channel as channel;
+use crossbeam_channel::Receiver;
+use crossbeam_channel::Sender;
 use std::thread;
 #[derive(Debug)]
 pub struct RequestSender{
@@ -19,7 +21,7 @@ pub struct PostParameters{
 impl RequestSender{
 
     pub fn new() -> RequestSender{
-        let (params_sender, params_receiver): (Sender<PostParameters>, Receiver<PostParameters>) = channel();
+        let (params_sender, params_receiver): (Sender<PostParameters>, Receiver<PostParameters>) = channel::unbounded();
         let request_sender = RequestSender{
             params_sender
         };
@@ -43,7 +45,7 @@ impl RequestSender{
                 .build().unwrap();
             loop{
                 match params_receiver.recv() {
-                    Ok(request_params) => {
+                    Some(request_params) => {
                         info!("Sending post! {:?}", request_params);
                         let beginning = time::Instant::now();
                         if let Some(file_path) = request_params.file_to_send.clone() {
@@ -72,8 +74,8 @@ impl RequestSender{
                               now.duration_since(beginning).as_secs(),
                               now.duration_since(beginning).subsec_nanos() as f64/1_000_000.0);
                     },
-                    Err(e) => {
-                        error!("Error receiving request params. Going to panic : {}", e);
+                    None => {
+                        error!("Error receiving request params. Going to panic.");
                         panic!();
                     }
                 }
@@ -83,7 +85,7 @@ impl RequestSender{
         return request_sender;
     }
     pub fn send(&self, post_parameters: PostParameters){
-        self.params_sender.send(post_parameters).unwrap();
+        self.params_sender.send(post_parameters);
     }
 
 }
