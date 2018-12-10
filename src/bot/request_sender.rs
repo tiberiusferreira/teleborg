@@ -45,7 +45,7 @@ impl RequestSender{
                 .build().unwrap();
             loop{
                 match params_receiver.recv() {
-                    Some(request_params) => {
+                    Ok(request_params) => {
                         info!("Sending post! {:?}", request_params);
                         let beginning = time::Instant::now();
                         if let Some(file_path) = request_params.file_to_send.clone() {
@@ -74,8 +74,8 @@ impl RequestSender{
                               now.duration_since(beginning).as_secs(),
                               now.duration_since(beginning).subsec_nanos() as f64/1_000_000.0);
                     },
-                    None => {
-                        error!("Error receiving request params. Going to panic.");
+                    Err(e) => {
+                        error!("Error receiving request params. Going to panic. {:?}", e);
                         panic!();
                     }
                 }
