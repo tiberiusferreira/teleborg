@@ -41,7 +41,7 @@ impl RequestSender{
         }
         thread::spawn(move ||{
             let client = Client::builder()
-                .timeout(Duration::from_secs(6))
+                .timeout(Duration::from_secs(10))
                 .build().unwrap();
             loop{
                 match params_receiver.recv() {
