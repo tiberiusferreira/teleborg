@@ -50,6 +50,10 @@ impl RequestSender{
                         let beginning = time::Instant::now();
                         if let Some(file_path) = request_params.file_to_send.clone() {
                             if let Ok(multipart_form)= create_multipart_form_with_file(request_params.clone().params, file_path){
+                                let now = time::Instant::now();
+                                info!("Took {}s and {}ms to CREATE MULTIPART post",
+                                      now.duration_since(beginning).as_secs(),
+                                      now.duration_since(beginning).subsec_nanos() as f64/1_000_000.0);
                                 match client.post(request_params.path.as_str()).multipart(multipart_form).send() {
                                     Ok(mut resp) => {
                                         info!("Got response: \n{:?}", resp);
@@ -58,6 +62,10 @@ impl RequestSender{
                                         error!("Error sending. {}\n Parameters: {:?}", e, request_params);
                                     }
                                 }
+                                let now = time::Instant::now();
+                                info!("Took {}s and {}ms to send MULTIPART post",
+                                      now.duration_since(beginning).as_secs(),
+                                      now.duration_since(beginning).subsec_nanos() as f64/1_000_000.0);
                             }
                             continue
                         }
