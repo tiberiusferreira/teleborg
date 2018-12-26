@@ -56,10 +56,10 @@ impl RequestSender{
                                       now.duration_since(beginning).subsec_nanos() as f64/1_000_000.0);
                                 match client.post(request_params.path.as_str()).multipart(multipart_form).send() {
                                     Ok(mut resp) => {
-                                        info!("Got response: \n{:?}", resp);
+                                        info!("Got response: \n{:#?}", resp);
                                     },
                                     Err(e) => {
-                                        error!("Error sending. {}\n Parameters: {:?}", e, request_params);
+                                        error!("Error sending. {}\n Parameters: {:#?}", e, request_params);
                                     }
                                 }
                                 let now = time::Instant::now();
@@ -71,10 +71,10 @@ impl RequestSender{
                         }
                         match client.post(request_params.path.as_str()).form(&request_params.params).send(){
                             Ok(mut resp) => {
-                                info!("Got response: \n{:?}", resp);
+                                info!("Got response: \n{:#?}", resp);
                             },
                             Err(e) => {
-                                error!("Error sending. {}\n Parameters: {:?}", e, request_params);
+                                error!("Error sending. {}\n Parameters: {:#?}", e, request_params);
                             }
                         }
                         let now = time::Instant::now();
