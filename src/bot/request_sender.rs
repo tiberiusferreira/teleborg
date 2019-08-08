@@ -2,10 +2,13 @@ extern crate reqwest;
 use std::time;
 use reqwest::{Client, multipart::Form};
 use std::time::Duration;
-use crossbeam_channel as channel;
+use ::{crossbeam_channel as channel, Message};
 use crossbeam_channel::Receiver;
 use crossbeam_channel::Sender;
 use std::thread;
+use std::io::Read;
+use serde_json::Value;
+
 #[derive(Debug)]
 pub struct RequestSender{
     params_sender: Sender<PostParameters>
@@ -55,7 +58,7 @@ impl RequestSender{
                                       now.duration_since(beginning).as_secs(),
                                       now.duration_since(beginning).subsec_nanos() as f64/1_000_000.0);
                                 match client.post(request_params.path.as_str()).multipart(multipart_form).send() {
-                                    Ok(mut resp) => {
+                                    Ok(resp) => {
                                         info!("Got response: \n{:#?}", resp);
                                     },
                                     Err(e) => {
@@ -70,7 +73,7 @@ impl RequestSender{
                             continue
                         }
                         match client.post(request_params.path.as_str()).form(&request_params.params).send(){
-                            Ok(mut resp) => {
+                            Ok(resp) => {
                                 info!("Got response: \n{:#?}", resp);
                             },
                             Err(e) => {
@@ -93,7 +96,59 @@ impl RequestSender{
         return request_sender;
     }
     pub fn send(&self, post_parameters: PostParameters){
-        self.params_sender.send(post_parameters);
+        self.params_sender.send(post_parameters).expect("Error sending teleborg http sender thread");
+    }
+
+    pub fn send_blocking(&self, post_parameters: PostParameters) -> Result<Message, ()>{
+        let client = Client::builder()
+            .timeout(Duration::from_secs(5))
+            .build().unwrap();
+
+        match client.post(post_parameters.path.as_str()).form(&post_parameters.params).send(){
+            Ok(mut resp) => {
+                let mut response_content = String::new();
+                match resp.read_to_string(&mut response_content){
+                    Ok(_) => (),
+                    Err(_) => {
+                        error!("Response could not be read to string: {}", response_content);
+                        return Err(())
+                    },
+                }
+                let json = match serde_json::from_str(response_content.as_str()){
+                    Ok(json_rec) => json_rec,
+                    Err(_) => {
+                        error!("Response had no JSON: {}", response_content);
+                        return Err(())
+                    },
+                };
+                let json: Value = match crate::error::check_json_has_ok(json){
+                    Ok(json_rec) => json_rec,
+                    Err(_) => {
+                        error!("Json had no OK: {}", response_content);
+                        return Err(())
+                    },
+                };
+                let msg_json = match json.get("result"){
+                    None => {
+                        error!("No result in JSON for send blocking");
+                        return Err(());
+                    },
+                    Some(msg_json) => {msg_json},
+                };
+                let msg: Message = match serde_json::from_value(msg_json.clone()){
+                    Ok(json_rec) => json_rec,
+                    Err(_) => {
+                        error!("Json was not MSG was: {}", response_content);
+                        return Err(())
+                    },
+                };
+                return Ok(msg);
+            },
+            Err(e) => {
+                error!("Error sending. {}\n Parameters: {:#?}", e, post_parameters.params);
+                return Err(())
+            }
+        }
     }
 
 }

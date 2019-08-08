@@ -72,7 +72,7 @@ impl ReceiverThreadData{
     }
 
     fn send_updates(&mut self, updates: Vec<Update>){
-        self.updates_sender.send(updates);
+        self.updates_sender.send(updates).expect("Error sending teleborg http sender thread");
     }
 
     fn handle_update(&mut self, updates: Vec<Update>){

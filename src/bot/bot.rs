@@ -9,7 +9,7 @@ use objects::OutgoingMessage;
 use objects::OutgoingPhoto;
 use objects::OutgoingChannelMessage;
 use objects::AnswerCallbackQuery;
-use objects::OutgoingEdit;
+use objects::*;
 use error::{Result};
 use error::Error::{JsonNotFound, RequestFailed};
 use objects::{Update};
@@ -28,6 +28,8 @@ pub trait TelegramInterface {
     fn start_getting_updates(&mut self);
     fn get_updates_channel(&self) -> &Receiver<Vec<Update>>;
     fn send_msg(&self, outgoing_message: OutgoingMessage);
+    fn send_msg_blocking(&self, outgoing_message: OutgoingMessage) -> std::result::Result<Message, ()>;
+    fn delete_message(&self, outgoing_delete: OutgoingDelete);
     fn send_channel_msg(&self, outgoing_message: OutgoingChannelMessage);
     fn edit_message_text(&self, outgoing_edit: OutgoingEdit);
     fn send_callback_answer(&self, callback_answer: AnswerCallbackQuery);
@@ -80,6 +82,12 @@ impl TelegramInterface for Bot{
         self.post_message(path, params)
     }
 
+    fn send_msg_blocking(&self, outgoing_message: OutgoingMessage) -> std::result::Result<Message, ()>{
+        let path = "sendMessage";
+        let params = outgoing_message.to_tuple_vec();
+        self.post_message_blocking(path, params)
+    }
+
     fn send_channel_msg(&self, outgoing_channel_message: OutgoingChannelMessage){
         let path = "sendMessage";
         let params = outgoing_channel_message.to_tuple_vec();
@@ -89,6 +97,12 @@ impl TelegramInterface for Bot{
     fn edit_message_text(&self, outgoing_edit: OutgoingEdit){
         let path = "editMessageText";
         let params = outgoing_edit.to_tuple_vec();
+        self.post_message(path, params);
+    }
+
+    fn delete_message(&self, outgoing_delete: OutgoingDelete){
+        let path = "deleteMessage";
+        let params = outgoing_delete.to_tuple_vec();
         self.post_message(path, params);
     }
 
@@ -163,5 +177,15 @@ impl Bot {
             params,
             file_to_send: None
         });
+    }
+
+    /// The actual networking done for sending messages.
+    fn post_message_blocking(&self, path: &str, params: Vec<(String, String)>) -> std::result::Result<Message, ()> {
+        let url = construct_api_url(&self.bot_url, path);
+        self.request_sender.send_blocking(PostParameters {
+            path: url.to_string(),
+            params,
+            file_to_send: None
+        })
     }
 }
